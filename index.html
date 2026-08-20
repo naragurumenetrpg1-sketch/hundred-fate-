@@ -32,6 +32,9 @@
   .layout { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
   .board-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
   canvas { display: block; border-radius: 4px; background: #0f1215; }
+  #mapScrollWrap { overflow-y: auto; overflow-x: hidden; border-radius: 4px; scroll-behavior: smooth; }
+  #mapScrollWrap::-webkit-scrollbar { width: 6px; }
+  #mapScrollWrap::-webkit-scrollbar-thumb { background: #454e57; border-radius: 3px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
   .stage-card { width: 200px; }
   .action-card { width: 280px; }
@@ -97,7 +100,9 @@
 
 <div class="layout">
   <div class="board-wrap">
-    <canvas id="board" width="432" height="432"></canvas>
+    <div id="mapScrollWrap">
+      <canvas id="board" width="432" height="432"></canvas>
+    </div>
   </div>
 
   <div class="card stage-card">
@@ -212,6 +217,7 @@ let MAP_CANVAS_HEIGHT = 432;
 
 const ROW_HEIGHT = 78;
 const ROW_MARGIN = 60;
+const MAP_VIEWPORT_HEIGHT = ROW_HEIGHT * 2 + 40; // shows "current" + "next" row by default
 const NODE_X_BY_COUNT = {
   1: [216],
   2: [130, 302],
@@ -223,6 +229,17 @@ function nodeXPositions(count) {
   const margin = 60;
   const usable = MAP_CANVAS_WIDTH - margin * 2;
   return Array.from({ length: count }, (_, i) => margin + (usable * i) / (count - 1 || 1));
+}
+
+// The furthest slot the player hasn't cleared yet ("current position").
+// Everything before this is cleared history; everything after "frontier + 1"
+// ("next") is not yet revealed on the map at all.
+function frontierSlotIndex() {
+  for (let i = 0; i < CAMPAIGN_SLOTS.length; i++) {
+    const slotCleared = CAMPAIGN_SLOTS[i].options.some(id => cleared.has(id));
+    if (!slotCleared) return i;
+  }
+  return CAMPAIGN_SLOTS.length - 1; // campaign fully cleared: pin to the last slot
 }
 
 async function loadCampaign() {
@@ -257,6 +274,7 @@ async function loadCampaign() {
     slot.options.forEach((id, j) => {
       const stage = stagesById[id];
       stage.id = id;
+      stage.slotIndex = i;
       stage.mapPos = { x: xs[j], y: rowY };
       stage.unlocks = nextOptions.slice();
       STAGE_MAP[id] = stage;
@@ -374,10 +392,20 @@ function buildTypePicker() {
 function enterSelect() {
   phase = 'select';
   setCanvasSize(MAP_CANVAS_WIDTH, MAP_CANVAS_HEIGHT);
+  const wrap = document.getElementById('mapScrollWrap');
+  wrap.style.maxHeight = MAP_VIEWPORT_HEIGHT + 'px';
   refreshStageHeader();
-  document.getElementById('phaseText').innerHTML = '<b>ステージ選択</b><br>盤面のノードをクリックしてください。';
+  document.getElementById('phaseText').innerHTML = '<b>ステージ選択</b><br>盤面のノードをクリックしてください。上にスクロールすると、クリア済みのステージも確認できます。';
   showPanel('panel-select');
   draw();
+
+  // Default scroll position: show "current" (frontier) + "next" row.
+  // Scrolling up reveals earlier (cleared) history.
+  const frontier = frontierSlotIndex();
+  const nextIndex = Math.min(frontier + 1, CAMPAIGN_SLOTS.length - 1);
+  const nextRowY = MAP_CANVAS_HEIGHT - ROW_MARGIN - ROW_HEIGHT * nextIndex;
+  const desiredScrollTop = Math.max(0, nextRowY - 40);
+  wrap.scrollTop = Math.min(desiredScrollTop, canvas.height - MAP_VIEWPORT_HEIGHT);
 }
 
 function selectStage(id) {
@@ -399,6 +427,7 @@ document.getElementById('backToSelectBtn').addEventListener('click', () => {
 function enterMuster() {
   phase = 'muster';
   setCanvasSize(GRID * CELL, GRID * CELL);
+  document.getElementById('mapScrollWrap').style.maxHeight = 'none';
   refreshStageHeader();
   const s = currentStage();
   deployCount = Math.max(1, Math.min(deployCount, pool, MAX_DEPLOY));
@@ -679,9 +708,13 @@ function drawStageMap() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.textAlign = 'center';
 
+  const maxVisibleSlot = Math.min(frontierSlotIndex() + 1, CAMPAIGN_SLOTS.length - 1);
+  const visible = id => STAGE_MAP[id].slotIndex <= maxVisibleSlot;
+
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#2c343c';
   for (const [a, b] of MAP_EDGES) {
+    if (!visible(a) || !visible(b)) continue;
     const pa = STAGE_MAP[a].mapPos, pb = STAGE_MAP[b].mapPos;
     ctx.beginPath();
     ctx.moveTo(pa.x, pa.y);
@@ -690,6 +723,7 @@ function drawStageMap() {
   }
 
   for (const id of STAGE_ORDER) {
+    if (!visible(id)) continue;
     const s = STAGE_MAP[id];
     const p = s.mapPos;
     const isCleared = cleared.has(id);
