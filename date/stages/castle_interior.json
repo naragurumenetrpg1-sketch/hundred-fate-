@@ -1,0 +1,15 @@
+{
+  "name": "城内部",
+  "desc": "柱と壁が入り組む狭い通路戦。",
+  "par": 12,
+  "bonus": 10,
+  "statMult": 1.2,
+  "obstacles": [
+    {"x":8,"y":6},{"x":9,"y":6},{"x":8,"y":11},{"x":9,"y":11}
+  ],
+  "enemies": [
+    {"type":"physical","x":1,"y":4},{"type":"physical","x":4,"y":4},{"type":"physical","x":7,"y":4},{"type":"physical","x":10,"y":4},{"type":"physical","x":13,"y":4},{"type":"physical","x":16,"y":4},
+    {"type":"ranged","x":3,"y":2},{"type":"ranged","x":6,"y":2},{"type":"ranged","x":9,"y":2},{"type":"ranged","x":12,"y":2},{"type":"ranged","x":15,"y":2},
+    {"type":"magic","x":5,"y":0},{"type":"magic","x":8,"y":0},{"type":"magic","x":11,"y":0},{"type":"magic","x":14,"y":0}
+  ]
+}

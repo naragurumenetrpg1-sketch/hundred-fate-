@@ -1,0 +1,15 @@
+{
+  "name": "城下町",
+  "desc": "建物が視界と進路を遮る市街戦。",
+  "par": 11,
+  "bonus": 9,
+  "statMult": 1.15,
+  "obstacles": [
+    {"x":6,"y":7},{"x":6,"y":8},{"x":11,"y":7},{"x":11,"y":8}
+  ],
+  "enemies": [
+    {"type":"physical","x":2,"y":4},{"type":"physical","x":5,"y":4},{"type":"physical","x":8,"y":4},{"type":"physical","x":11,"y":4},{"type":"physical","x":14,"y":4},{"type":"physical","x":16,"y":4},
+    {"type":"ranged","x":4,"y":2},{"type":"ranged","x":7,"y":2},{"type":"ranged","x":10,"y":2},{"type":"ranged","x":13,"y":2},{"type":"ranged","x":16,"y":2},
+    {"type":"magic","x":6,"y":0},{"type":"magic","x":9,"y":0},{"type":"magic","x":12,"y":0},{"type":"magic","x":15,"y":0}
+  ]
+}
