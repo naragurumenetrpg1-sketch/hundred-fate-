@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>箱庭オートバトラー・プロトタイプ</title>
 <style>
   :root {
@@ -17,6 +18,10 @@
     --accent: #e8c34f;
   }
   * { box-sizing: border-box; }
+  html, body {
+    overscroll-behavior: none;   /* no pull-to-refresh / rubber-band bounce */
+    touch-action: pan-y;         /* allow vertical scroll, block pinch-zoom & horizontal swipe */
+  }
   body {
     margin: 0;
     background: var(--bg);
@@ -26,15 +31,30 @@
     flex-direction: column;
     align-items: center;
     padding: 24px 12px 40px;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none; /* no long-press callout menu */
+  }
+  textarea, input {
+    -webkit-user-select: text;
+    user-select: text;
   }
   h1 { font-size: 20px; font-weight: 600; letter-spacing: 0.02em; margin: 0 0 4px; }
   .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; text-align: center; max-width: 480px; }
 
-  .layout { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 480px; }
+  .layout { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 520px; }
+
+  @media (max-width: 480px) {
+    body { padding: 12px 6px 24px; }
+    h1 { font-size: 16px; margin-bottom: 2px; }
+    .subtitle { font-size: 10.5px; margin-bottom: 10px; line-height: 1.4; }
+    .board-wrap { padding: 6px; }
+    .status-bar { padding: 10px 12px; }
+  }
 
   .board-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; width: 100%; }
   canvas { display: block; border-radius: 4px; background: #0f1215; width: 100%; height: auto; }
-  #mapScrollWrap { overflow-y: auto; overflow-x: hidden; border-radius: 4px; scroll-behavior: smooth; }
+  #mapScrollWrap { overflow-y: auto; overflow-x: hidden; border-radius: 4px; scroll-behavior: smooth; touch-action: pan-y; }
   #mapScrollWrap::-webkit-scrollbar { width: 6px; }
   #mapScrollWrap::-webkit-scrollbar-thumb { background: #454e57; border-radius: 3px; }
 
