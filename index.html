@@ -29,15 +29,55 @@
   }
   h1 { font-size: 20px; font-weight: 600; letter-spacing: 0.02em; margin: 0 0 4px; }
   .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; text-align: center; max-width: 480px; }
-  .layout { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
-  .board-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-  canvas { display: block; border-radius: 4px; background: #0f1215; }
+
+  .layout { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 480px; }
+
+  .board-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; width: 100%; }
+  canvas { display: block; border-radius: 4px; background: #0f1215; width: 100%; height: auto; }
   #mapScrollWrap { overflow-y: auto; overflow-x: hidden; border-radius: 4px; scroll-behavior: smooth; }
   #mapScrollWrap::-webkit-scrollbar { width: 6px; }
   #mapScrollWrap::-webkit-scrollbar-thumb { background: #454e57; border-radius: 3px; }
+
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-  .stage-card { width: 200px; }
-  .action-card { width: 280px; }
+  .action-card { width: 100%; }
+
+  /* ---- horizontal status bar (stage info + pool), mobile-friendly ---- */
+  .status-bar {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px; width: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .status-bar-left { min-width: 0; flex: 1; }
+  .status-bar-left .top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .status-bar-left .num { color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: 0.05em; }
+  .status-bar-left .name { font-size: 14px; font-weight: 600; margin: 2px 0 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status-bar-left .desc { font-size: 11px; color: var(--muted); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status-bar-right { flex-shrink: 0; text-align: right; }
+  .status-bar-right .pool-label { font-size: 10px; color: var(--muted); }
+  .status-bar-right .pool-val { font-size: 20px; font-weight: 700; color: var(--accent); line-height: 1.1; }
+  .status-bar-right .battle-counts { display: flex; gap: 10px; font-size: 11px; color: var(--muted); margin-top: 3px; justify-content: flex-end; }
+
+  .info-btn {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid var(--line); background: #232a31; color: var(--muted);
+    font-size: 12px; font-weight: 700; cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .info-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  .info-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+  }
+  .info-modal-backdrop.show { display: flex; }
+  .info-modal {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px; max-width: 360px; width: 100%; display: flex; flex-direction: column; gap: 12px;
+    max-height: 80vh; overflow-y: auto;
+  }
+  .info-modal h3 { margin: 0; font-size: 14px; }
+  .info-modal .status-line { margin: 0; }
+  .info-modal-close { align-self: flex-end; }
 
   .count-row-group { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 10px; }
 
@@ -105,25 +145,22 @@
     </div>
   </div>
 
-  <div class="card stage-card">
-    <div class="stage-header">
-      <div class="num" id="stageNum">STAGE 1 / 3</div>
+  <div class="status-bar">
+    <div class="status-bar-left">
+      <div class="top-row">
+        <span class="num" id="stageNum">STAGE 1 / 3</span>
+        <button id="infoBtn" class="info-btn" aria-label="凡例を表示">i</button>
+      </div>
       <div class="name" id="stageName">-</div>
       <div class="desc" id="stageDesc">-</div>
     </div>
-
-    <div class="pool-row"><span class="label">兵力プール</span><span class="val" id="poolVal">100</span></div>
-
-    <div class="count-row-group" id="battleCountsInStageCard" style="display:none;">
-      <div class="count-row"><span><span class="dot ally"></span>味方</span><span id="allyCount">0</span></div>
-      <div class="count-row"><span><span class="dot enemy"></span>敵</span><span id="enemyCount">0</span></div>
-    </div>
-
-    <div class="legend">
-      <div class="legend-row">● 物理: HP高め、隣接専用</div>
-      <div class="legend-row">▲ 遠距離: 離れて攻撃(射程3)</div>
-      <div class="legend-row">◆ 魔法: 高火力、範囲巻き込み</div>
-      <div class="legend-row">■ 障害物: 通行不可</div>
+    <div class="status-bar-right">
+      <div class="pool-label">兵力プール</div>
+      <div class="pool-val" id="poolVal">100</div>
+      <div class="battle-counts" id="battleCountsInStageCard" style="display:none;">
+        <span><span class="dot ally"></span><span id="allyCount">0</span></span>
+        <span><span class="dot enemy"></span><span id="enemyCount">0</span></span>
+      </div>
     </div>
   </div>
 
@@ -134,8 +171,7 @@
     <div class="panel-block" id="panel-select">
       <div class="status-line">
         <b>ステージ選択</b><br>
-        金色=クリア済み、水色=挑戦可能、灰色(鍵)=未開放です。<br>
-        東西どちらかのルートに一度出兵すると、もう片方は赤(×)になり選べなくなります。1本道になるので慎重に選んでください。
+        盤面のノードをクリックしてください。凡例は右上の「i」から確認できます。
       </div>
     </div>
 
@@ -171,7 +207,7 @@
 
     <!-- BATTLE -->
     <div class="panel-block" id="panel-battle">
-      <div class="status-line"><b>自動戦闘中…</b><br>ステージ情報カードで戦況を確認できます。</div>
+      <div class="status-line"><b>自動戦闘中…</b><br>上のバーで戦況を確認できます。</div>
     </div>
 
     <!-- RESULT -->
@@ -179,6 +215,24 @@
       <div class="result-box" id="resultBox"></div>
       <button id="resultContinue" class="action primary">次へ</button>
     </div>
+  </div>
+</div>
+
+<div class="info-modal-backdrop" id="infoModalBackdrop">
+  <div class="info-modal">
+    <h3>凡例・ルール</h3>
+    <div class="legend">
+      <div class="legend-row">● 物理: HP高め、隣接専用</div>
+      <div class="legend-row">▲ 遠距離: 離れて攻撃(射程3)</div>
+      <div class="legend-row">◆ 魔法: 高火力、範囲巻き込み</div>
+      <div class="legend-row">■ 障害物: 通行不可</div>
+    </div>
+    <div class="status-line">
+      <b>ステージ選択マップ</b><br>
+      金色=クリア済み、水色=挑戦可能、灰色(鍵)=未開放です。上にスクロールするとクリア済みのステージも確認できます。<br><br>
+      東西・分岐ルートのどちらかに一度出兵すると、もう片方は赤(×)になり選べなくなります。1本道になるので慎重に選んでください。
+    </div>
+    <button id="infoModalCloseBtn" class="action info-modal-close">閉じる</button>
   </div>
 </div>
 
@@ -393,7 +447,14 @@ function enterSelect() {
   phase = 'select';
   setCanvasSize(MAP_CANVAS_WIDTH, MAP_CANVAS_HEIGHT);
   const wrap = document.getElementById('mapScrollWrap');
-  wrap.style.maxHeight = MAP_VIEWPORT_HEIGHT + 'px';
+
+  // canvas is CSS-responsive (width:100%), so its displayed size differs from
+  // its internal drawing-buffer resolution. Convert buffer-space row heights
+  // into actual on-screen pixels before sizing/scrolling the viewport.
+  const displayScale = canvas.getBoundingClientRect().width / MAP_CANVAS_WIDTH;
+  const toDisplayPx = bufferPx => bufferPx * displayScale;
+
+  wrap.style.maxHeight = toDisplayPx(MAP_VIEWPORT_HEIGHT) + 'px';
   refreshStageHeader();
   document.getElementById('phaseText').innerHTML = '<b>ステージ選択</b><br>盤面のノードをクリックしてください。上にスクロールすると、クリア済みのステージも確認できます。';
   showPanel('panel-select');
@@ -404,8 +465,8 @@ function enterSelect() {
   const frontier = frontierSlotIndex();
   const nextIndex = Math.min(frontier + 1, CAMPAIGN_SLOTS.length - 1);
   const nextRowY = MAP_CANVAS_HEIGHT - ROW_MARGIN - ROW_HEIGHT * nextIndex;
-  const desiredScrollTop = Math.max(0, nextRowY - 40);
-  wrap.scrollTop = Math.min(desiredScrollTop, canvas.height - MAP_VIEWPORT_HEIGHT);
+  const desiredScrollTop = Math.max(0, toDisplayPx(nextRowY - 40));
+  wrap.scrollTop = Math.min(desiredScrollTop, toDisplayPx(canvas.height) - toDisplayPx(MAP_VIEWPORT_HEIGHT));
 }
 
 function selectStage(id) {
@@ -417,6 +478,16 @@ function selectStage(id) {
   customStage = null;
   enterMuster();
 }
+
+document.getElementById('infoBtn').addEventListener('click', () => {
+  document.getElementById('infoModalBackdrop').classList.add('show');
+});
+document.getElementById('infoModalCloseBtn').addEventListener('click', () => {
+  document.getElementById('infoModalBackdrop').classList.remove('show');
+});
+document.getElementById('infoModalBackdrop').addEventListener('click', (e) => {
+  if (e.target.id === 'infoModalBackdrop') e.currentTarget.classList.remove('show');
+});
 
 document.getElementById('backToSelectBtn').addEventListener('click', () => {
   customStage = null;
@@ -515,8 +586,13 @@ function updatePlacedCount() {
 
 canvas.addEventListener('click', (e) => {
   const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+  // canvas is now CSS-responsive (width:100%), so its displayed size can differ
+  // from its internal drawing-buffer resolution (canvas.width/height). Scale
+  // click coordinates back into buffer space before using them.
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
 
   if (phase === 'select') {
     for (const id of STAGE_ORDER) {
