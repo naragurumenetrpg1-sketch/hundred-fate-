@@ -1,0 +1,13 @@
+{
+  "name": "村",
+  "desc": "小規模な残存部隊。一息つける面。",
+  "par": 8,
+  "bonus": 7,
+  "statMult": 0.95,
+  "obstacles": [],
+  "enemies": [
+    {"type":"physical","x":5,"y":4},{"type":"physical","x":9,"y":4},{"type":"physical","x":13,"y":4},
+    {"type":"ranged","x":7,"y":2},{"type":"ranged","x":11,"y":2},
+    {"type":"magic","x":9,"y":0}
+  ]
+}
