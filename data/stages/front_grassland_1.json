@@ -1,0 +1,51 @@
+{
+  "name": "城前草原",
+  "desc": "見張りの小部隊。密集陣形の基本を確認しよう。",
+  "par": 6,
+  "bonus": 5,
+  "statMult": 1.0,
+  "obstacles": [],
+  "enemies": [
+    {
+      "type": "physical",
+      "x": 5,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 8,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 11,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 13,
+      "y": 4
+    },
+    {
+      "type": "ranged",
+      "x": 7,
+      "y": 2
+    },
+    {
+      "type": "ranged",
+      "x": 12,
+      "y": 2
+    },
+    {
+      "type": "magic",
+      "x": 8,
+      "y": 0
+    },
+    {
+      "type": "magic",
+      "x": 11,
+      "y": 0
+    }
+  ],
+  "backgroundImage": "assets/backgrounds/front_grassland_1.jpg"
+}

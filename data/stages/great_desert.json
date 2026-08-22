@@ -1,0 +1,71 @@
+{
+  "name": "大砂漠(西ルート)",
+  "desc": "遮るもののない開けた布陣。側面を突かれないよう注意。",
+  "par": 9,
+  "bonus": 8,
+  "statMult": 1.0,
+  "obstacles": [],
+  "enemies": [
+    {
+      "type": "physical",
+      "x": 4,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 6,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 9,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 12,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 14,
+      "y": 4
+    },
+    {
+      "type": "ranged",
+      "x": 4,
+      "y": 2
+    },
+    {
+      "type": "ranged",
+      "x": 8,
+      "y": 2
+    },
+    {
+      "type": "ranged",
+      "x": 12,
+      "y": 2
+    },
+    {
+      "type": "ranged",
+      "x": 15,
+      "y": 2
+    },
+    {
+      "type": "magic",
+      "x": 6,
+      "y": 0
+    },
+    {
+      "type": "magic",
+      "x": 9,
+      "y": 0
+    },
+    {
+      "type": "magic",
+      "x": 12,
+      "y": 0
+    }
+  ],
+  "backgroundImage": "assets/backgrounds/great_desert.jpg"
+}
