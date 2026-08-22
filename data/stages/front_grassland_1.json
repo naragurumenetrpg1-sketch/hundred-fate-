@@ -4,48 +4,17 @@
   "par": 6,
   "bonus": 5,
   "statMult": 1.0,
+  "orientation": "horizontal",
   "obstacles": [],
   "enemies": [
-    {
-      "type": "physical",
-      "x": 5,
-      "y": 4
-    },
-    {
-      "type": "physical",
-      "x": 8,
-      "y": 4
-    },
-    {
-      "type": "physical",
-      "x": 11,
-      "y": 4
-    },
-    {
-      "type": "physical",
-      "x": 13,
-      "y": 4
-    },
-    {
-      "type": "ranged",
-      "x": 7,
-      "y": 2
-    },
-    {
-      "type": "ranged",
-      "x": 12,
-      "y": 2
-    },
-    {
-      "type": "magic",
-      "x": 8,
-      "y": 0
-    },
-    {
-      "type": "magic",
-      "x": 11,
-      "y": 0
-    }
+    {"type": "physical", "x": 13, "y": 5},
+    {"type": "physical", "x": 13, "y": 8},
+    {"type": "physical", "x": 13, "y": 11},
+    {"type": "physical", "x": 13, "y": 13},
+    {"type": "ranged", "x": 15, "y": 7},
+    {"type": "ranged", "x": 15, "y": 12},
+    {"type": "magic", "x": 17, "y": 8},
+    {"type": "magic", "x": 17, "y": 11}
   ],
   "backgroundImage": "assets/backgrounds/front_grassland_1.jpg"
 }
