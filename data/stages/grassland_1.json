@@ -1,0 +1,61 @@
+{
+  "name": "草原",
+  "desc": "少し広がった敵陣。数がやや増える。",
+  "par": 7,
+  "bonus": 6,
+  "statMult": 1.0,
+  "obstacles": [],
+  "enemies": [
+    {
+      "type": "physical",
+      "x": 3,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 6,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 9,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 12,
+      "y": 4
+    },
+    {
+      "type": "physical",
+      "x": 15,
+      "y": 4
+    },
+    {
+      "type": "ranged",
+      "x": 5,
+      "y": 2
+    },
+    {
+      "type": "ranged",
+      "x": 9,
+      "y": 2
+    },
+    {
+      "type": "ranged",
+      "x": 13,
+      "y": 2
+    },
+    {
+      "type": "magic",
+      "x": 7,
+      "y": 0
+    },
+    {
+      "type": "magic",
+      "x": 10,
+      "y": 0
+    }
+  ],
+  "backgroundImage": "assets/backgrounds/grassland_1.jpg"
+}
