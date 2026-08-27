@@ -1,0 +1,28 @@
+{
+  "name": "渓谷",
+  "desc": "岩に阻まれた狭い道。障害物の迂回を意識しよう。",
+  "par": 9,
+  "bonus": 8,
+  "statMult": 1.0,
+  "obstacles": [
+    { "x": 7, "y": 9 },
+    { "x": 7, "y": 10 },
+    { "x": 7, "y": 11 },
+    { "x": 11, "y": 9 },
+    { "x": 11, "y": 10 },
+    { "x": 11, "y": 11 }
+  ],
+  "enemies": [
+    { "type": "physical", "x": 3, "y": 4 },
+    { "type": "physical", "x": 8, "y": 4 },
+    { "type": "physical", "x": 9, "y": 4 },
+    { "type": "physical", "x": 14, "y": 4 },
+    { "type": "ranged", "x": 5, "y": 2 },
+    { "type": "ranged", "x": 8, "y": 2 },
+    { "type": "ranged", "x": 9, "y": 2 },
+    { "type": "ranged", "x": 13, "y": 2 },
+    { "type": "magic", "x": 8, "y": 0 },
+    { "type": "magic", "x": 9, "y": 0 }
+  ],
+  "backgroundImage": "stage-art/ravine.webp"
+}
