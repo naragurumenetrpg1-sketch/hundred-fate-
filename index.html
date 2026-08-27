@@ -221,32 +221,39 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   transition: opacity .5s ease;
 }
 #titleScreen::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(0,0,0,.55) 100%);
+  background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.6) 68%, rgba(0,0,0,.85) 100%);
 }
-#titleTap {
+#titleMenu {
   position: relative;
   z-index: 1;
-  padding: 14px 36px;
-  border: 1px solid rgba(230,196,79,.85);
+  margin-top: 32vh;
+  width: 78%;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.title-btn {
+  padding: 13px 18px;
+  border: 1px solid rgba(211,169,76,.65);
   border-radius: 3px;
-  background: rgba(10,12,17,.55);
+  background: rgba(10,12,17,.6);
   color: #f0ead9;
   font-size: 15px;
-  letter-spacing: .15em;
+  letter-spacing: .12em;
   font-family: "Hiragino Mincho ProN", serif;
-  animation: titlePulse 1.8s ease-in-out infinite;
+  text-align: center;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, opacity .15s ease;
 }
-@keyframes titlePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .45; }
-}
+.title-btn:hover { background: rgba(211,169,76,.18); border-color: #d3a94c; }
+.title-btn.disabled { opacity: .4; cursor: default; pointer-events: none; }
 #titleScreen.hidden {
   opacity: 0;
   pointer-events: none;
@@ -256,7 +263,11 @@
 <body>
 
 <div id="titleScreen">
-  <div id="titleTap">タップして始める</div>
+  <div id="titleMenu">
+    <div class="title-btn" id="btnNewGame">はじめから</div>
+    <div class="title-btn" id="btnContinue">つづきから</div>
+    <div class="title-btn" id="btnGallery">ギャラリー</div>
+  </div>
 </div>
 
 <div id="appTitleBlock">
@@ -479,6 +490,36 @@ async function loadCampaign() {
 let cleared = new Set();
 let currentStageId = null;
 let chosenBranch = null; // once set, sibling routes in the same branch group become locked
+
+// ---------- セーブ/ロード(簡易・localStorage) ----------
+const SAVE_KEY = 'hundredfate_save_v1';
+
+function saveGame() {
+  try {
+    const data = {
+      pool, cleared: [...cleared], currentStageId, chosenBranch, stageProgress,
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch (e) { console.warn('save failed', e); }
+}
+
+function hasSaveData() {
+  try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    pool = data.pool ?? 100;
+    cleared = new Set(data.cleared || []);
+    currentStageId = data.currentStageId || FIRST_SLOT_OPTIONS[0];
+    chosenBranch = data.chosenBranch || null;
+    stageProgress = data.stageProgress || {};
+    return true;
+  } catch (e) { console.warn('load failed', e); return false; }
+}
 
 function siblingsOf(id) {
   for (const group of BRANCH_GROUPS) {
@@ -966,6 +1007,7 @@ function resolveBattle(won) {
   if (won && !customStage) {
     cleared.add(currentStageId);
     delete stageProgress[currentStageId]; // stage resets to full strength for future replays
+    saveGame();
   }
 
   // 結果パネルの表示処理は showResult() にまとめ、
@@ -1052,6 +1094,7 @@ function fullReset() {
   customStage = null;
   deployCount = 6;
   units = [];
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
   enterSelect();
 }
 
@@ -1223,9 +1266,30 @@ async function initGame() {
       '<br>また、file:// でHTMLを直接開いている場合は fetch がブロックされます。ローカルサーバー経由(例: <code>npx serve</code>)か、Vercel等にデプロイした状態で開いてください。';
   }
 }
-document.getElementById('titleScreen').addEventListener('click', () => {
+function closeTitleScreen() {
   document.getElementById('titleScreen').classList.add('hidden');
-}, { once: true });
+}
+
+document.getElementById('btnNewGame').addEventListener('click', () => {
+  fullReset(); // 既存セーブを消して最初から
+  closeTitleScreen();
+});
+
+document.getElementById('btnContinue').addEventListener('click', () => {
+  if (!hasSaveData()) return; // disabledクラスで既にクリック無効化されているが念のため
+  loadGame();
+  enterSelect();
+  closeTitleScreen();
+});
+
+document.getElementById('btnGallery').addEventListener('click', () => {
+  location.href = 'gallery.html';
+});
+
+// セーブが無ければ「つづきから」をグレーアウト
+if (!hasSaveData()) {
+  document.getElementById('btnContinue').classList.add('disabled');
+}
 
 initGame();
 </script>
