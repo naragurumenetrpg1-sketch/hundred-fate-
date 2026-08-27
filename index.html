@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>箱庭オートバトラー・プロトタイプ</title>
+<style>
+  :root {
+    --bg: #171009;
+    --panel: #241a10;
+    --panel-2: #2f2314;
+    --line: #6b4f28;
+    --ally: #4fb0e8;
+    --ally-glow: #8fd4ff;
+    --enemy: #e8654f;
+    --enemy-glow: #ff9a86;
+    --text: #ecdfc0;
+    --muted: #a8926a;
+    --accent: #e3b34a;
+    --accent-dark: #a67c2e;
+    --accent-light: #f0cf6e;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    overscroll-behavior: none;   /* no pull-to-refresh / rubber-band bounce */
+    touch-action: pan-y;         /* allow vertical scroll, block pinch-zoom & horizontal swipe */
+  }
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #241a10 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: "Segoe UI", "Hiragino Sans", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px 40px;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none; /* no long-press callout menu */
+  }
+  textarea, input {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.06em; margin: 0 0 4px; color: var(--accent-light); text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; text-align: center; max-width: 480px; }
+
+  .layout { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 520px; }
+
+  @media (max-width: 480px) {
+    body { padding: 12px 6px 24px; }
+    h1 { font-size: 16px; margin-bottom: 2px; }
+    .subtitle { font-size: 10.5px; margin-bottom: 10px; line-height: 1.4; }
+    .board-wrap { padding: 6px; }
+    .status-bar { padding: 10px 12px; }
+  }
+
+  .board-wrap {
+    background: linear-gradient(160deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line);
+    box-shadow: inset 0 0 0 1px rgba(227,179,74,0.12), 0 2px 6px rgba(0,0,0,0.35);
+    border-radius: 8px; padding: 10px; width: 100%;
+  }
+  canvas { display: block; border-radius: 4px; background: #0f1215; width: 100%; height: auto; }
+  #mapScrollWrap { overflow-y: auto; overflow-x: hidden; border-radius: 4px; scroll-behavior: smooth; touch-action: pan-y; }
+  #mapScrollWrap::-webkit-scrollbar { width: 6px; }
+  #mapScrollWrap::-webkit-scrollbar-thumb { background: #454e57; border-radius: 3px; }
+
+  .card {
+    background: linear-gradient(160deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line);
+    box-shadow: inset 0 0 0 1px rgba(227,179,74,0.12), 0 2px 6px rgba(0,0,0,0.35);
+    border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .action-card { width: 100%; }
+
+  /* ---- horizontal status bar (stage info + pool), mobile-friendly ---- */
+  .status-bar {
+    background: linear-gradient(160deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line);
+    box-shadow: inset 0 0 0 1px rgba(227,179,74,0.12), 0 2px 6px rgba(0,0,0,0.35);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 14px; width: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .status-bar-left { min-width: 0; flex: 1; }
+  .status-bar-left .top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .status-bar-left .num { color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; }
+  .status-bar-left .name { font-size: 14px; font-weight: 700; margin: 2px 0 1px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status-bar-left .desc { font-size: 11px; color: var(--muted); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status-bar-right { flex-shrink: 0; text-align: right; }
+  .status-bar-right .pool-label { font-size: 10px; color: var(--muted); }
+  .status-bar-right .pool-val { font-size: 20px; font-weight: 700; color: var(--accent-light); line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+  .status-bar-right .pool-val .coin { font-size: 15px; margin-right: 2px; }
+  .status-bar-right .battle-counts { display: flex; gap: 10px; font-size: 11px; color: var(--muted); margin-top: 3px; justify-content: flex-end; }
+
+  .info-btn {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid var(--line); background: linear-gradient(160deg,#3a2c18,#2a2015); color: var(--muted);
+    font-size: 12px; font-weight: 700; cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .info-btn:hover { border-color: var(--accent); color: var(--accent-light); }
+
+  .info-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+  }
+  .info-modal-backdrop.show { display: flex; }
+  .info-modal {
+    background: linear-gradient(160deg, var(--panel-2), var(--panel)); border: 1px solid var(--line);
+    box-shadow: inset 0 0 0 1px rgba(227,179,74,0.12), 0 4px 12px rgba(0,0,0,0.5);
+    border-radius: 10px;
+    padding: 18px; max-width: 360px; width: 100%; display: flex; flex-direction: column; gap: 12px;
+    max-height: 80vh; overflow-y: auto;
+  }
+  .info-modal h3 { margin: 0; font-size: 14px; color: var(--accent-light); }
+  .info-modal .status-line { margin: 0; }
+  .info-modal-close { align-self: flex-end; }
+
+  .count-row-group { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 10px; }
+
+  .stage-header { border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  .stage-header .num { color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: 0.05em; }
+  .stage-header .name { font-size: 15px; font-weight: 600; margin: 2px 0 4px; }
+  .stage-header .desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  .pool-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+  .pool-row .val { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .pool-row .label { color: var(--muted); }
+
+  .status-line { font-size: 13px; line-height: 1.6; color: var(--muted); }
+  .status-line b { color: var(--text); }
+
+  .panel-block { display: none; flex-direction: column; gap: 10px; }
+  .panel-block.active { display: flex; }
+
+  .deploy-control { display: flex; align-items: center; gap: 10px; justify-content: center; }
+  .deploy-control button {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line);
+    background: linear-gradient(160deg,#3a2c18,#2a2015); color: var(--accent-light); font-size: 16px; cursor: pointer;
+  }
+  .deploy-control button:hover:not(:disabled) { border-color: var(--accent); }
+  .deploy-control button:disabled { opacity: 0.3; cursor: default; }
+  .deploy-control .num { font-size: 24px; font-weight: 700; min-width: 48px; text-align: center; color: var(--accent-light); text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+  .par-hint { font-size: 11px; color: var(--muted); text-align: center; }
+
+  .type-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .type-btn {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    padding: 10px 6px 8px; gap: 4px; border-radius: 8px;
+    border: 1px solid var(--line); background: linear-gradient(160deg, #332415, #221a10);
+    color: var(--text); cursor: pointer; font-size: 11.5px;
+  }
+  .type-btn .shape { width: 20px; height: 20px; flex-shrink: 0; }
+  .type-btn .label-text { font-weight: 600; }
+  .type-btn .stats { color: var(--muted); font-size: 9.5px; line-height: 1.4; }
+  .type-btn.selected {
+    border-color: var(--accent);
+    background: linear-gradient(160deg, #40301a, #2a2015);
+    box-shadow: 0 0 0 1px rgba(227,179,74,0.5) inset;
+  }
+  .type-btn.depleted { opacity: 0.4; }
+
+  .action-buttons-row { display: flex; gap: 8px; }
+  .action-buttons-row button { flex: 1; padding: 10px 6px; font-size: 12px; }
+
+  .roster-detail-row { display: flex; gap: 10px; align-items: flex-start; }
+  .roster-detail-row .roster-grid { flex: 3; grid-template-columns: repeat(3, 1fr); }
+  .unit-detail {
+    flex: 2; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+    background: linear-gradient(160deg, #221a10, #1c150c);
+    padding: 10px; font-size: 11px; color: var(--muted); min-height: 84px;
+    display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  }
+  .unit-detail-empty { text-align: center; font-size: 10.5px; }
+  .unit-detail-name { color: var(--accent-light); font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .unit-detail-role { color: var(--muted); font-size: 10px; margin-bottom: 4px; }
+
+  #appTitleBlock.hidden { display: none; }
+  .count-row span:first-child { color: var(--muted); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .dot.ally { background: var(--ally); }
+  .dot.enemy { background: var(--enemy); }
+
+  button.action {
+    appearance: none; border: 1px solid var(--line);
+    background: linear-gradient(160deg, #3a2c18, #2a2015); color: var(--text);
+    padding: 10px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    transition: border-color .15s, background .15s;
+  }
+  button.action:hover:not(:disabled) { border-color: var(--accent); background: linear-gradient(160deg, #443219, #33260f); }
+  button.action:disabled { opacity: 0.35; cursor: default; }
+  button.primary {
+    background: linear-gradient(160deg, var(--accent-light), var(--accent-dark));
+    color: #2a1a08; border-color: var(--accent-dark); font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.35);
+    letter-spacing: 0.03em;
+  }
+  button.primary:hover:not(:disabled) { background: linear-gradient(160deg, #f7dd8a, #b98935); }
+
+  .result-box { border: 1px solid var(--line); background: rgba(0,0,0,0.15); border-radius: 8px; padding: 10px; font-size: 12.5px; line-height: 1.8; }
+  .result-box.win { border-color: rgba(79,176,232,0.4); background: rgba(79,176,232,0.08); }
+  .result-box.lose { border-color: rgba(232,101,79,0.4); background: rgba(232,101,79,0.08); }
+  .result-box .title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .result-box .title.win { color: var(--ally-glow); }
+  .result-box .title.lose { color: var(--enemy-glow); }
+  .result-box .bonus { color: var(--accent-light); font-weight: 600; }
+
+  .legend { font-size: 11px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .legend-row { display: flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+
+<div id="appTitleBlock">
+  <h1>箱庭オートバトラー・プロトタイプ</h1>
+  <div class="subtitle">兵力プールを管理しながら、ステージ1〜10のキャンペーンを攻略しよう。少ない兵で勝てばボーナス補充あり。</div>
+</div>
+
+<div class="layout">
+  <div class="board-wrap">
+    <div id="mapScrollWrap">
+      <canvas id="board" width="432" height="432"></canvas>
+    </div>
+  </div>
+
+  <div class="card action-card">
+    <div class="status-line" id="phaseText"></div>
+
+    <!-- SELECT -->
+    <div class="panel-block" id="panel-select">
+      <div class="status-line">
+        <b>ステージ選択</b><br>
+        盤面のノードをクリックしてください。凡例は右上の「i」から確認できます。
+      </div>
+    </div>
+
+    <!-- MUSTER -->
+    <div class="panel-block" id="panel-muster">
+      <div class="deploy-control">
+        <button id="deployMinus">−</button>
+        <div class="num" id="deployNum">6</div>
+        <button id="deployPlus">＋</button>
+      </div>
+      <div class="par-hint" id="parHint"></div>
+      <button id="museterConfirm" class="action primary">この人数で出兵</button>
+    </div>
+
+    <!-- DEPLOY FLOW: setup -> battle -> result, one persistent screen -->
+    <div class="panel-block" id="panel-deploy">
+      <div class="action-buttons-row" id="deployButtonsRow">
+        <button id="retreatBtn" class="action">一時撤退</button>
+        <button id="startBtn" class="action primary" disabled>戦闘開始</button>
+        <button id="pauseBtn" class="action" disabled>一時停止</button>
+      </div>
+
+      <div class="roster-detail-row" id="deployRosterRow">
+        <div class="roster-grid" id="rosterGrid"></div>
+        <div class="unit-detail" id="unitDetail">
+          <div class="unit-detail-empty">兵種をタップして詳細を表示</div>
+        </div>
+      </div>
+
+      <button id="clearPlacementBtn" class="action" style="align-self:center; font-size:11px; padding:6px 12px;">配置をやり直す</button>
+
+      <div id="deployResultWrap" style="display:none; flex-direction:column; gap:14px;">
+        <div class="result-box" id="resultBox"></div>
+        <button id="resultContinue" class="action primary">次へ</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-bar-left">
+      <div class="top-row">
+        <span class="num" id="stageNum">STAGE 1 / 3</span>
+        <div style="display:flex; gap:6px;">
+          <button id="infoBtn" class="info-btn" aria-label="凡例を表示">i</button>
+          <button id="hamburgerBtn" class="info-btn" aria-label="メニュー">☰</button>
+        </div>
+      </div>
+      <div class="name" id="stageName">-</div>
+      <div class="desc" id="stageDesc">-</div>
+    </div>
+    <div class="status-bar-right">
+      <div class="pool-label">所持金</div>
+      <div class="pool-val"><span class="coin">🪙</span><span id="poolVal">100</span></div>
+      <div class="battle-counts" id="battleCountsInStageCard" style="display:none;">
+        <span><span class="dot ally"></span><span id="allyCount">0</span></span>
+        <span id="enemyCountWrap"><span class="dot enemy"></span><span id="enemyCount">0</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="info-modal-backdrop" id="infoModalBackdrop">
+  <div class="info-modal">
+    <h3>凡例・ルール</h3>
+    <div class="legend">
+      <div class="legend-row">● 物理: HP高め、隣接専用</div>
+      <div class="legend-row">▲ 遠距離: 離れて攻撃(射程3)</div>
+      <div class="legend-row">◆ 魔法: 高火力、範囲巻き込み</div>
+      <div class="legend-row">■ 障害物: 通行不可</div>
+    </div>
+    <div class="status-line">
+      <b>ステージ選択マップ</b><br>
+      金色=クリア済み、水色=挑戦可能、灰色(鍵)=未開放です。上にスクロールするとクリア済みのステージも確認できます。<br><br>
+      東西・分岐ルートのどちらかに一度出兵すると、もう片方は赤(×)になり選べなくなります。1本道になるので慎重に選んでください。
+    </div>
+    <button id="infoModalCloseBtn" class="action info-modal-close">閉じる</button>
+  </div>
+</div>
+
+<div class="info-modal-backdrop" id="hudMenuBackdrop">
+  <div class="info-modal">
+    <h3>メニュー</h3>
+    <button id="hudBackToSelectBtn" class="action" style="width:100%;">ステージ選択に戻る</button>
+    <button id="hudCustomStageBtn" class="action" style="width:100%;">ステージエディタのJSONを読み込む</button>
+    <div id="customLoadBox" style="display:none; flex-direction:column; gap:8px;">
+      <textarea id="customJsonInput" rows="6" style="width:100%; font-size:11px;" placeholder="エディタで書き出したJSONをここに貼り付け"></textarea>
+      <button id="loadCustomBtn" class="action primary" style="width:100%;">このステージを読み込む</button>
+      <div id="customLoadStatus" style="font-size:11px; color:var(--muted);"></div>
+    </div>
+    <button id="hudMenuCloseBtn" class="action info-modal-close">閉じる</button>
+  </div>
+</div>
+
+<script src="story/story-data.js"></script>
+<script src="story/story-engine.js"></script>
+<script src="battle.js"></script>
+<script>
+const GRID = 18;
+const CELL = 24;
+const ALLY_ZONE_ROWS = [13,14,15,16,17];
+const ENEMY_ZONE_ROWS = [0,1,2,3,4];
+const ALLY_ZONE_COLS = [0,1,2,3,4];
+const ENEMY_ZONE_COLS = [13,14,15,16,17];
+
+function stageIsHorizontal(stage) { return stage && stage.orientation === 'horizontal'; }
+const MAX_DEPLOY = 20;
+
+const TYPES = Battle.TYPES;
+const TYPE_KEYS = Battle.TYPE_KEYS;
+
+function stageEnemies(rows) {
+  const list = [];
+  for (const r of rows) for (const x of r.xs) list.push({ type: r.type, x, y: r.y });
+  return list;
+}
+
+// ---------- Campaign loading (data-driven: data/campaign.json + data/stages/*.json) ----------
+let STAGE_MAP = {};
+let STAGE_ORDER = [];
+let MAP_EDGES = [];
+let BRANCH_GROUPS = [];
+let FIRST_SLOT_OPTIONS = [];
+let CAMPAIGN_SLOTS = [];
+let MAP_CANVAS_WIDTH = 432;
+let MAP_CANVAS_HEIGHT = 432;
+
+const ROW_HEIGHT = 78;
+const ROW_MARGIN = 60;
+const MAP_VIEWPORT_HEIGHT = ROW_HEIGHT * 3 + 40; // shows "current" + "next" + one prior (cleared) row by default
+const NODE_X_BY_COUNT = {
+  1: [216],
+  2: [130, 302],
+  3: [80, 216, 352],
+};
+function nodeXPositions(count) {
+  if (NODE_X_BY_COUNT[count]) return NODE_X_BY_COUNT[count];
+  // fallback for >3 options: evenly spread across the width
+  const margin = 60;
+  const usable = MAP_CANVAS_WIDTH - margin * 2;
+  return Array.from({ length: count }, (_, i) => margin + (usable * i) / (count - 1 || 1));
+}
+
+// The furthest slot the player hasn't cleared yet ("current position").
+// Everything before this is cleared history; everything after "frontier + 1"
+// ("next") is not yet revealed on the map at all.
+function frontierSlotIndex() {
+  for (let i = 0; i < CAMPAIGN_SLOTS.length; i++) {
+    const slotCleared = CAMPAIGN_SLOTS[i].options.some(id => cleared.has(id));
+    if (!slotCleared) return i;
+  }
+  return CAMPAIGN_SLOTS.length - 1; // campaign fully cleared: pin to the last slot
+}
+
+async function loadCampaign() {
+  const campaignRes = await fetch('data/campaign.json');
+  if (!campaignRes.ok) throw new Error('campaign.json の取得に失敗しました (' + campaignRes.status + ')');
+  const campaign = await campaignRes.json();
+  CAMPAIGN_SLOTS = campaign.slots;
+
+  const allIds = [];
+  for (const slot of CAMPAIGN_SLOTS) allIds.push(...slot.options);
+
+  const fetched = await Promise.all(allIds.map(async id => {
+    const res = await fetch(`data/stages/${id}.json`);
+    if (!res.ok) throw new Error(`data/stages/${id}.json の取得に失敗しました (${res.status})`);
+    return [id, await res.json()];
+  }));
+  const stagesById = Object.fromEntries(fetched);
+
+  MAP_CANVAS_HEIGHT = ROW_MARGIN * 2 + ROW_HEIGHT * (CAMPAIGN_SLOTS.length - 1);
+
+  STAGE_MAP = {};
+  STAGE_ORDER = [];
+  MAP_EDGES = [];
+  BRANCH_GROUPS = [];
+  FIRST_SLOT_OPTIONS = CAMPAIGN_SLOTS[0].options.slice();
+
+  CAMPAIGN_SLOTS.forEach((slot, i) => {
+    const rowY = MAP_CANVAS_HEIGHT - ROW_MARGIN - ROW_HEIGHT * i;
+    const xs = nodeXPositions(slot.options.length);
+    const nextOptions = (i + 1 < CAMPAIGN_SLOTS.length) ? CAMPAIGN_SLOTS[i + 1].options : [];
+
+    slot.options.forEach((id, j) => {
+      const stage = stagesById[id];
+      stage.id = id;
+      stage.slotIndex = i;
+      stage.mapPos = { x: xs[j], y: rowY };
+      stage.unlocks = nextOptions.slice();
+      STAGE_MAP[id] = stage;
+      STAGE_ORDER.push(id);
+    });
+
+    if (slot.options.length > 1) BRANCH_GROUPS.push(slot.options.slice());
+    for (const a of slot.options) for (const b of nextOptions) MAP_EDGES.push([a, b]);
+  });
+}
+
+let cleared = new Set();
+let currentStageId = null;
+let chosenBranch = null; // once set, sibling routes in the same branch group become locked
+
+function siblingsOf(id) {
+  for (const group of BRANCH_GROUPS) {
+    if (group.includes(id)) return group.filter(x => x !== id);
+  }
+  return [];
+}
+
+function isBranchBlocked(id) {
+  return !!chosenBranch && siblingsOf(chosenBranch).includes(id);
+}
+
+function isUnlocked(id) {
+  if (FIRST_SLOT_OPTIONS.includes(id)) return true;
+  if (isBranchBlocked(id)) return false;
+  return STAGE_ORDER.some(sid => cleared.has(sid) && STAGE_MAP[sid].unlocks.includes(id));
+}
+
+let customStage = null;
+let stageProgress = {}; // stageId -> array of live enemy unit objects (persists damage across retries)
+
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+
+const bgImageCache = {};
+function getBgImage(relativePath) {
+  if (!bgImageCache[relativePath]) {
+    const img = new Image();
+    img.onload = () => { if (phase !== 'select') draw(); };
+    img.src = relativePath;
+    bgImageCache[relativePath] = img;
+  }
+  return bgImageCache[relativePath];
+}
+
+function setCanvasSize(w, h) {
+  if (canvas.width !== w) canvas.width = w;
+  if (canvas.height !== h) canvas.height = h;
+}
+
+let pool = 100;
+let deployCount = 6;
+let units = [];
+let phase = 'select';
+let tickHandle = null;
+let selectedType = 'physical';
+
+function makeUnit(team, type, x, y, statMult = 1.0) {
+  return Battle.makeUnit(team, type, x, y, statMult);
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function inZone(x, y, rows) { return rows.includes(y); }
+function inAllyZone(x, y) {
+  const stage = currentStage();
+  return stageIsHorizontal(stage) ? ALLY_ZONE_COLS.includes(x) : ALLY_ZONE_ROWS.includes(y);
+}
+function occupied(x, y) { return Battle.occupied(units, x, y); }
+function isObstacleCell(x, y) {
+  return Battle.isObstacleCell(currentStage().obstacles, x, y);
+}
+
+function currentStage() { return customStage || STAGE_MAP[currentStageId]; }
+
+// ---------- UI plumbing ----------
+function showPanel(id) {
+  document.querySelectorAll('.panel-block').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setTitleVisible(show) {
+  document.getElementById('appTitleBlock').classList.toggle('hidden', !show);
+}
+
+function refreshStageHeader() {
+  document.getElementById('poolVal').textContent = pool;
+
+  if (phase === 'select') {
+    document.getElementById('stageNum').textContent = `攻略状況: ${cleared.size} / ${STAGE_ORDER.length}`;
+    document.getElementById('stageName').textContent = 'ステージ選択';
+    document.getElementById('stageDesc').textContent = '盤面のノードをクリックして挑戦する面を選んでください。';
+    return;
+  }
+
+  const s = currentStage();
+  document.getElementById('stageNum').textContent = customStage
+    ? 'カスタムステージ'
+    : `攻略状況: ${cleared.size} / ${STAGE_ORDER.length}`;
+  document.getElementById('stageName').textContent = s.name;
+  document.getElementById('stageDesc').textContent = s.desc;
+}
+
+// Header's right-side "army status" readout: placement count pre-battle,
+// live survivor count during/after battle. Hidden on select/muster.
+function refreshArmyStatus() {
+  const wrap = document.getElementById('battleCountsInStageCard');
+  const allyEl = document.getElementById('allyCount');
+  const enemyEl = document.getElementById('enemyCount');
+  const enemyWrap = document.getElementById('enemyCountWrap');
+
+  if (phase === 'setup') {
+    wrap.style.display = 'flex';
+    enemyWrap.style.display = 'none';
+    const placed = units.filter(u => u.team === 'ally' && u.hp > 0).length;
+    allyEl.textContent = `配置 ${placed}/${deployCount}`;
+  } else if (phase === 'battle' || phase === 'result') {
+    wrap.style.display = 'flex';
+    enemyWrap.style.display = '';
+    allyEl.textContent = `生存 ${units.filter(u => u.team === 'ally' && u.hp > 0).length}`;
+    enemyEl.textContent = `敵 ${units.filter(u => u.team === 'enemy' && u.hp > 0).length}`;
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function shapeSvg(type, color) {
+  if (type === 'physical') return `<svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="${color}"/></svg>`;
+  if (type === 'ranged') return `<svg width="12" height="12"><polygon points="6,1 11,10 1,10" fill="${color}"/></svg>`;
+  return `<svg width="12" height="12"><polygon points="6,0 12,6 6,12 0,6" fill="${color}"/></svg>`;
+}
+
+const ROLE_LABELS = {
+  physical: '近接 / タンク型',
+  ranged:   '遠隔 / アウトレンジ型',
+  magic:    '魔術 / 範囲火力型',
+};
+
+function showUnitDetail(key) {
+  const t = TYPES[key];
+  document.getElementById('unitDetail').innerHTML = `
+    <div class="unit-detail-name">${t.label}</div>
+    <div class="unit-detail-role">${ROLE_LABELS[key] || ''}</div>
+    <div>HP: ${t.hp}</div>
+    <div>ATK: ${t.atk}</div>
+    <div>射程: ${t.range}${t.splash ? '(範囲攻撃)' : ''}</div>
+  `;
+}
+
+// Pre-battle: tap a type to select it, then tap the grid to place a unit of that type.
+function buildRosterPlacement() {
+  const wrap = document.getElementById('rosterGrid');
+  wrap.innerHTML = '';
+  for (const key of TYPE_KEYS) {
+    const t = TYPES[key];
+    const placedOfType = units.filter(u => u.team === 'ally' && u.type === key && u.hp > 0).length;
+    const btn = document.createElement('button');
+    btn.className = 'type-btn' + (key === selectedType ? ' selected' : '');
+    btn.innerHTML = `<span class="shape">${shapeSvg(key, '#4fb0e8')}</span><span class="label-text">${t.label}</span><span class="stats">${placedOfType}体配置</span>`;
+    btn.addEventListener('click', () => { selectedType = key; showUnitDetail(key); buildRosterPlacement(); });
+    wrap.appendChild(btn);
+  }
+}
+
+// During/after battle: live read-only view of how many of each type are still standing.
+function buildRosterLive() {
+  const wrap = document.getElementById('rosterGrid');
+  wrap.innerHTML = '';
+  for (const key of TYPE_KEYS) {
+    const t = TYPES[key];
+    const aliveOfType = units.filter(u => u.team === 'ally' && u.type === key && u.hp > 0).length;
+    const btn = document.createElement('button');
+    btn.className = 'type-btn' + (aliveOfType === 0 ? ' depleted' : '');
+    btn.innerHTML = `<span class="shape">${shapeSvg(key, '#4fb0e8')}</span><span class="label-text">${t.label}</span><span class="stats">生存 ${aliveOfType}</span>`;
+    btn.addEventListener('click', () => showUnitDetail(key));
+    wrap.appendChild(btn);
+  }
+}
+
+// ---------- Select phase ----------
+function enterSelect() {
+  phase = 'select';
+  setTitleVisible(true);
+  setCanvasSize(MAP_CANVAS_WIDTH, MAP_CANVAS_HEIGHT);
+  const wrap = document.getElementById('mapScrollWrap');
+
+  // canvas is CSS-responsive (width:100%), so its displayed size differs from
+  // its internal drawing-buffer resolution. Convert buffer-space row heights
+  // into actual on-screen pixels before sizing/scrolling the viewport.
+  const displayScale = canvas.getBoundingClientRect().width / MAP_CANVAS_WIDTH;
+  const toDisplayPx = bufferPx => bufferPx * displayScale;
+
+  wrap.style.maxHeight = toDisplayPx(MAP_VIEWPORT_HEIGHT) + 'px';
+  refreshStageHeader();
+  refreshArmyStatus();
+  document.getElementById('phaseText').innerHTML = '<b>ステージ選択</b><br>盤面のノードをクリックしてください。上にスクロールすると、クリア済みのステージも確認できます。';
+  showPanel('panel-select');
+  draw();
+
+  // Default scroll position: show "current" (frontier) + "next" row.
+  // Scrolling up reveals earlier (cleared) history.
+  const frontier = frontierSlotIndex();
+  const nextIndex = Math.min(frontier + 1, CAMPAIGN_SLOTS.length - 1);
+  const nextRowY = MAP_CANVAS_HEIGHT - ROW_MARGIN - ROW_HEIGHT * nextIndex;
+  const desiredScrollTop = Math.max(0, toDisplayPx(nextRowY - 40));
+  wrap.scrollTop = Math.min(desiredScrollTop, toDisplayPx(canvas.height) - toDisplayPx(MAP_VIEWPORT_HEIGHT));
+}
+
+function selectStage(id) {
+  if (!isUnlocked(id) && !cleared.has(id)) return;
+  if (!chosenBranch && siblingsOf(id).length > 0) {
+    chosenBranch = id;
+  }
+  currentStageId = id;
+  customStage = null;
+  // ノベルパート(出兵前の序章)を再生してから編成画面へ。
+  // story-data.js に該当データが無ければ即座に enterMuster() が呼ばれるだけなので安全。
+  StoryEngine.play(id, 'intro', () => enterMuster());
+}
+
+document.getElementById('infoBtn').addEventListener('click', () => {
+  document.getElementById('infoModalBackdrop').classList.add('show');
+});
+document.getElementById('infoModalCloseBtn').addEventListener('click', () => {
+  document.getElementById('infoModalBackdrop').classList.remove('show');
+});
+document.getElementById('infoModalBackdrop').addEventListener('click', (e) => {
+  if (e.target.id === 'infoModalBackdrop') e.currentTarget.classList.remove('show');
+});
+
+document.getElementById('hamburgerBtn').addEventListener('click', () => {
+  document.getElementById('hudMenuBackdrop').classList.add('show');
+});
+document.getElementById('hudMenuCloseBtn').addEventListener('click', () => {
+  document.getElementById('hudMenuBackdrop').classList.remove('show');
+});
+document.getElementById('hudMenuBackdrop').addEventListener('click', (e) => {
+  if (e.target.id === 'hudMenuBackdrop') e.currentTarget.classList.remove('show');
+});
+document.getElementById('hudBackToSelectBtn').addEventListener('click', () => {
+  document.getElementById('hudMenuBackdrop').classList.remove('show');
+  customStage = null;
+  enterSelect();
+});
+
+// ---------- Muster phase ----------
+function enterMuster() {
+  phase = 'muster';
+  setTitleVisible(false);
+  setCanvasSize(GRID * CELL, GRID * CELL);
+  document.getElementById('mapScrollWrap').style.maxHeight = 'none';
+  refreshStageHeader();
+  refreshArmyStatus();
+  const s = currentStage();
+  deployCount = Math.max(1, Math.min(deployCount, pool, MAX_DEPLOY));
+  document.getElementById('deployNum').textContent = deployCount;
+
+  let hint = `目安: ${s.par}体以下でクリアするとボーナス+${s.bonus}体`;
+  if (!customStage && stageProgress[currentStageId]) {
+    const total = stageProgress[currentStageId].length;
+    const alive = stageProgress[currentStageId].filter(u => u.hp > 0).length;
+    if (alive < total) {
+      hint += ` / 前回の戦闘で敵を${total - alive}体撃破済み(${alive}体残存、ダメージ持ち越し中)`;
+    }
+  }
+  document.getElementById('parHint').textContent = hint;
+  document.getElementById('phaseText').innerHTML = '<b>出兵準備</b><br>何体連れていくか決めてください。';
+  showPanel('panel-muster');
+  draw();
+}
+
+document.getElementById('deployMinus').addEventListener('click', () => {
+  deployCount = Math.max(1, deployCount - 1);
+  document.getElementById('deployNum').textContent = deployCount;
+});
+document.getElementById('deployPlus').addEventListener('click', () => {
+  deployCount = Math.min(pool, MAX_DEPLOY, deployCount + 1);
+  document.getElementById('deployNum').textContent = deployCount;
+});
+document.getElementById('hudCustomStageBtn').addEventListener('click', () => {
+  const box = document.getElementById('customLoadBox');
+  box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+});
+
+document.getElementById('loadCustomBtn').addEventListener('click', () => {
+  const raw = document.getElementById('customJsonInput').value.trim();
+  const statusEl = document.getElementById('customLoadStatus');
+  if (!raw) { statusEl.textContent = 'JSONを貼り付けてください。'; return; }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    statusEl.textContent = 'JSONの形式が正しくありません。エディタの書き出し結果をそのまま貼り付けてください。';
+    return;
+  }
+  if (!Array.isArray(parsed.enemies) || parsed.enemies.length === 0) {
+    statusEl.textContent = '敵ユニットが1体もありません。エディタで配置してから書き出してください。';
+    return;
+  }
+  customStage = {
+    name: parsed.name || 'カスタムステージ',
+    desc: parsed.desc || '',
+    par: Number.isFinite(parsed.par) ? parsed.par : parsed.enemies.length,
+    bonus: Number.isFinite(parsed.bonus) ? parsed.bonus : 0,
+    statMult: Number.isFinite(parsed.statMult) ? parsed.statMult : 1.0,
+    obstacles: Array.isArray(parsed.obstacles) ? parsed.obstacles : [],
+    enemies: parsed.enemies,
+  };
+  statusEl.textContent = '読み込みました。下のボタンから出兵できます。';
+  document.getElementById('customLoadBox').style.display = 'none';
+  document.getElementById('hudMenuBackdrop').classList.remove('show');
+  enterMuster();
+});
+
+document.getElementById('museterConfirm').addEventListener('click', () => {
+  if (deployCount < 1 || deployCount > pool) return;
+  pool -= deployCount;
+  units = [];
+  enterSetup();
+});
+
+// ---------- Setup (placement) phase ----------
+let battlePaused = false;
+
+function enterSetup() {
+  phase = 'setup';
+  battlePaused = false;
+  setTitleVisible(false);
+  refreshStageHeader();
+  document.getElementById('phaseText').innerHTML = '<b>配置フェーズ</b><br>兵種をタップして選び、水色ゾーンをクリックして配置してください。';
+  selectedType = TYPE_KEYS[0];
+  buildRosterPlacement();
+  showUnitDetail(selectedType);
+  refreshArmyStatus();
+
+  document.getElementById('retreatBtn').disabled = false;
+  document.getElementById('startBtn').textContent = '戦闘開始';
+  refreshDeployButton();
+  document.getElementById('pauseBtn').disabled = true;
+  document.getElementById('pauseBtn').textContent = '一時停止';
+  document.getElementById('deployButtonsRow').style.display = 'flex';
+  document.getElementById('deployRosterRow').style.display = 'flex';
+  document.getElementById('deployResultWrap').style.display = 'none';
+  document.getElementById('clearPlacementBtn').style.display = '';
+
+  showPanel('panel-deploy');
+  draw();
+}
+
+function refreshDeployButton() {
+  const placed = units.filter(u => u.team === 'ally' && u.hp > 0).length;
+  document.getElementById('startBtn').disabled = placed !== deployCount;
+}
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  // canvas is now CSS-responsive (width:100%), so its displayed size can differ
+  // from its internal drawing-buffer resolution (canvas.width/height). Scale
+  // click coordinates back into buffer space before using them.
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+
+  if (phase === 'select') {
+    for (const id of STAGE_ORDER) {
+      const p = STAGE_MAP[id].mapPos;
+      const dx = mx - p.x, dy = my - p.y;
+      if (dx*dx + dy*dy <= 30*30) {
+        selectStage(id);
+        return;
+      }
+    }
+    return;
+  }
+
+  if (phase !== 'setup') return;
+  const x = Math.floor(mx / CELL);
+  const y = Math.floor(my / CELL);
+  if (x < 0 || x >= GRID || y < 0 || y >= GRID) return;
+  if (Battle.isEdgeCell(x, y, GRID)) return; // 盤面の縁には配置不可
+  if (!inAllyZone(x, y)) return;
+  const placed = units.filter(u => u.team === 'ally').length;
+  if (placed >= deployCount) return;
+  if (occupied(x, y) || isObstacleCell(x, y)) return;
+  units.push(makeUnit('ally', selectedType, x, y));
+  buildRosterPlacement();
+  refreshDeployButton();
+  refreshArmyStatus();
+  draw();
+});
+
+document.getElementById('clearPlacementBtn').addEventListener('click', () => {
+  units = units.filter(u => u.team !== 'ally');
+  buildRosterPlacement();
+  refreshDeployButton();
+  refreshArmyStatus();
+  draw();
+});
+
+document.getElementById('retreatBtn').addEventListener('click', () => {
+  if (phase !== 'setup') return; // mid-battle retreat isn't supported yet
+  customStage = null;
+  enterSelect();
+});
+
+document.getElementById('pauseBtn').addEventListener('click', () => {
+  if (phase !== 'battle') return;
+  battlePaused = !battlePaused;
+  document.getElementById('pauseBtn').textContent = battlePaused ? '再開' : '一時停止';
+});
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  if (phase !== 'setup') return;
+  const s = currentStage();
+
+  if (customStage) {
+    // custom JSON stages always start fresh (no persistence key to tie retries to)
+    for (const e of s.enemies) units.push(makeUnit('enemy', e.type, e.x, e.y, s.statMult));
+  } else {
+    if (!stageProgress[currentStageId]) {
+      stageProgress[currentStageId] = s.enemies.map(e => {
+        const t = TYPES[e.type];
+        const hp = Math.round(t.hp * s.statMult);
+        return {
+          team: 'enemy', type: e.type, x: e.x, y: e.y,
+          hp, maxHp: hp, atk: Math.round(t.atk * s.statMult),
+          range: t.range, splash: t.splash,
+        };
+      });
+    }
+    for (const es of stageProgress[currentStageId]) {
+      if (es.hp <= 0) continue; // stayed dead from a previous attempt
+      Battle.reviveUnit(es);
+      units.push(es); // same object reference: hp/position changes persist automatically
+    }
+  }
+
+  phase = 'battle';
+  battlePaused = false;
+  document.getElementById('phaseText').innerHTML = '<b>戦闘フェーズ</b><br>自動で戦っています…';
+  document.getElementById('retreatBtn').disabled = true;
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('pauseBtn').disabled = false;
+  document.getElementById('pauseBtn').textContent = '一時停止';
+  document.getElementById('clearPlacementBtn').style.display = 'none';
+  buildRosterLive();
+  refreshArmyStatus();
+  draw();
+  tickHandle = setInterval(battleTick, 450);
+});
+
+// ---------- Battle phase ----------
+function nearestEnemy(u) {
+  return Battle.nearestEnemy(units, u);
+}
+
+function battleTick() {
+  if (battlePaused) return;
+
+  Battle.tick(units, currentStage().obstacles, GRID);
+
+  buildRosterLive();
+  refreshArmyStatus();
+  draw();
+
+  const allyAlive = Battle.allyAlive(units);
+  const enemyAlive = Battle.enemyAlive(units);
+
+  if (!allyAlive || !enemyAlive) {
+    clearInterval(tickHandle);
+    resolveBattle(allyAlive && !enemyAlive);
+  }
+}
+
+// ---------- Result phase ----------
+function resolveBattle(won) {
+  phase = 'result';
+  const survivors = units.filter(u => u.team === 'ally' && u.hp > 0).length;
+  const casualties = deployCount - survivors;
+  const s = currentStage();
+  let bonus = 0;
+
+  pool += survivors;
+  if (won && deployCount <= s.par) {
+    bonus = s.bonus;
+    pool += bonus;
+  }
+
+  if (won && !customStage) {
+    cleared.add(currentStageId);
+    delete stageProgress[currentStageId]; // stage resets to full strength for future replays
+  }
+
+  // 結果パネルの表示処理は showResult() にまとめ、
+  // 勝利時はノベルパート(終章)を再生してから呼び出す。
+  const showResult = () => {
+  refreshStageHeader();
+  refreshArmyStatus();
+
+  document.getElementById('pauseBtn').disabled = true;
+  const box = document.getElementById('resultBox');
+  const btn = document.getElementById('resultContinue');
+
+  if (won) {
+    box.className = 'result-box win';
+    let html = `<div class="title win">突破!</div>`;
+    html += `出兵: ${deployCount}体 / 生還: ${survivors}体 / 損耗: ${casualties}体<br>`;
+    if (bonus > 0) {
+      html += `<span class="bonus">目安人数以下での勝利! ボーナス補充 +${bonus}体</span>`;
+    } else {
+      html += `目安(${s.par}体以下)を超えていたのでボーナスなし。`;
+    }
+    box.innerHTML = html;
+
+    if (!customStage && cleared.size === STAGE_ORDER.length) {
+      btn.textContent = 'もう一度最初から';
+      box.innerHTML += `<br><br><b>全ステージ制覇です。お疲れさまでした!</b>`;
+      btn.onclick = () => { fullReset(); };
+    } else {
+      btn.textContent = 'ステージ選択に戻る';
+      btn.onclick = () => { enterSelect(); };
+    }
+  } else {
+    box.className = 'result-box lose';
+    let html = `<div class="title lose">敗走…</div>出兵: ${deployCount}体 / 生還: ${survivors}体 / 損耗: ${casualties}体<br>`;
+    if (!customStage && stageProgress[currentStageId]) {
+      const total = stageProgress[currentStageId].length;
+      const alive = stageProgress[currentStageId].filter(u => u.hp > 0).length;
+      if (alive < total) {
+        html += `敵は${total}体中${total - alive}体を撃破済み(${alive}体残存)。このダメージは次回に持ち越されます。<br>`;
+      }
+    }
+    html += `兵を立て直して再挑戦しましょう。`;
+    box.innerHTML = html;
+
+    if (pool <= 0) {
+      box.innerHTML += `<br><br><b>兵力が尽きました。作戦失敗です。</b>`;
+      btn.textContent = 'もう一度最初から';
+      btn.onclick = () => { fullReset(); };
+    } else {
+      btn.textContent = 'この面に再挑戦';
+      btn.onclick = () => { enterMuster(); };
+    }
+  }
+
+  if (customStage) {
+    if (won || pool > 0) {
+      btn.textContent = '本編に戻る';
+      btn.onclick = () => { customStage = null; enterSelect(); };
+    }
+  }
+
+  document.getElementById('deployButtonsRow').style.display = 'none';
+  document.getElementById('deployRosterRow').style.display = 'none';
+  document.getElementById('clearPlacementBtn').style.display = 'none';
+  document.getElementById('deployResultWrap').style.display = 'flex';
+  document.getElementById('phaseText').innerHTML = '';
+  draw();
+  }; // showResult ここまで
+
+  if (won && !customStage) {
+    // 該当データが無ければ StoryEngine 側で即 showResult() が呼ばれるだけ。
+    StoryEngine.play(currentStageId, 'outro', showResult);
+  } else {
+    showResult();
+  }
+}
+
+function fullReset() {
+  pool = 100;
+  cleared = new Set();
+  currentStageId = FIRST_SLOT_OPTIONS[0];
+  chosenBranch = null;
+  stageProgress = {};
+  customStage = null;
+  deployCount = 6;
+  units = [];
+  enterSelect();
+}
+
+// ---------- Rendering ----------
+function draw() {
+  if (phase === 'select') { drawStageMap(); return; }
+  drawBattlefield();
+}
+
+function drawStageMap() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.textAlign = 'center';
+
+  const maxVisibleSlot = Math.min(frontierSlotIndex() + 1, CAMPAIGN_SLOTS.length - 1);
+  const visible = id => STAGE_MAP[id].slotIndex <= maxVisibleSlot;
+
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#2c343c';
+  for (const [a, b] of MAP_EDGES) {
+    if (!visible(a) || !visible(b)) continue;
+    const pa = STAGE_MAP[a].mapPos, pb = STAGE_MAP[b].mapPos;
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.stroke();
+  }
+
+  for (const id of STAGE_ORDER) {
+    if (!visible(id)) continue;
+    const s = STAGE_MAP[id];
+    const p = s.mapPos;
+    const isCleared = cleared.has(id);
+    const unlocked = isUnlocked(id);
+    const blocked = isBranchBlocked(id);
+
+    let fill = '#20262c', stroke = '#454e57';
+    if (isCleared) { fill = '#e8c34f'; stroke = '#f2d266'; }
+    else if (unlocked) { fill = '#1b2933'; stroke = '#4fb0e8'; }
+    else if (blocked) { fill = '#2a1c1c'; stroke = '#6b3a3a'; }
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 26, 0, Math.PI * 2);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = stroke;
+    ctx.stroke();
+
+    if (!isCleared && stageProgress[id]) {
+      const total = stageProgress[id].length;
+      const alive = stageProgress[id].filter(u => u.hp > 0).length;
+      if (alive < total) {
+        ctx.beginPath();
+        ctx.arc(p.x + 18, p.y - 18, 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#e8654f';
+        ctx.fill();
+      }
+    }
+
+    ctx.fillStyle = isCleared ? '#1a1a1a' : (unlocked ? '#dfe6ec' : (blocked ? '#a86a6a' : '#7c8a96'));
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(isCleared ? '済' : (unlocked ? '' : (blocked ? '×' : '鍵')), p.x, p.y + 5);
+
+    ctx.fillStyle = '#dfe6ec';
+    ctx.font = '11px sans-serif';
+    const parts = s.name.split(': ');
+    ctx.fillText(parts[0], p.x, p.y + 42);
+    if (parts[1]) ctx.fillText(parts[1], p.x, p.y + 55);
+  }
+
+  ctx.textAlign = 'start';
+}
+
+function drawBattlefield() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const stage = currentStage();
+  const bgImg = stage.backgroundImage ? getBgImage(stage.backgroundImage) : null;
+  const hasBg = bgImg && bgImg.complete && bgImg.naturalWidth > 0;
+
+  if (hasBg) {
+    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+  }
+
+  const horizontal = stageIsHorizontal(stage);
+  ctx.fillStyle = hasBg ? 'rgba(79,176,232,0.13)' : 'rgba(79,176,232,0.07)';
+  if (horizontal) {
+    for (const c of ALLY_ZONE_COLS) ctx.fillRect(c*CELL, 0, CELL, GRID*CELL);
+  } else {
+    for (const r of ALLY_ZONE_ROWS) ctx.fillRect(0, r*CELL, GRID*CELL, CELL);
+  }
+  ctx.fillStyle = hasBg ? 'rgba(232,101,79,0.13)' : 'rgba(232,101,79,0.07)';
+  if (horizontal) {
+    for (const c of ENEMY_ZONE_COLS) ctx.fillRect(c*CELL, 0, CELL, GRID*CELL);
+  } else {
+    for (const r of ENEMY_ZONE_ROWS) ctx.fillRect(0, r*CELL, GRID*CELL, CELL);
+  }
+
+  ctx.strokeStyle = hasBg ? 'rgba(255,255,255,0.18)' : '#20262c';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= GRID; i++) {
+    ctx.beginPath(); ctx.moveTo(i*CELL, 0); ctx.lineTo(i*CELL, GRID*CELL); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i*CELL); ctx.lineTo(GRID*CELL, i*CELL); ctx.stroke();
+  }
+
+  // 盤面の縁(配置・侵入不可)を薄いハッチングで明示
+  ctx.fillStyle = 'rgba(0,0,0,0.32)';
+  ctx.fillRect(0, 0, GRID*CELL, CELL);              // 上端
+  ctx.fillRect(0, (GRID-1)*CELL, GRID*CELL, CELL);  // 下端
+  ctx.fillRect(0, 0, CELL, GRID*CELL);               // 左端
+  ctx.fillRect((GRID-1)*CELL, 0, CELL, GRID*CELL);   // 右端
+
+  const obs = stage.obstacles;
+  if (obs && obs.length) {
+    if (hasBg) {
+      // background art already shows the terrain; just mark the blocked cells subtly
+      ctx.strokeStyle = 'rgba(232,101,79,0.75)';
+      ctx.lineWidth = 2;
+      for (const o of obs) ctx.strokeRect(o.x*CELL+2, o.y*CELL+2, CELL-4, CELL-4);
+    } else {
+      ctx.fillStyle = '#8a8f96';
+      for (const o of obs) ctx.fillRect(o.x*CELL+3, o.y*CELL+3, CELL-6, CELL-6);
+    }
+  }
+
+  for (const u of units) {
+    if (u.hp <= 0) continue;
+    const cx = u.x*CELL + CELL/2;
+    const cy = u.y*CELL + CELL/2;
+    const color = u.team === 'ally' ? '#4fb0e8' : '#e8654f';
+    drawShape(u.type, cx, cy, color);
+
+    const w = CELL*0.7;
+    const hpRatio = Math.max(u.hp,0)/u.maxHp;
+    ctx.fillStyle = '#000000aa';
+    ctx.fillRect(cx - w/2, u.y*CELL+2, w, 3);
+    ctx.fillStyle = hpRatio > 0.5 ? '#8fe88f' : hpRatio > 0.25 ? '#e8d24f' : '#e85f5f';
+    ctx.fillRect(cx - w/2, u.y*CELL+2, w*hpRatio, 3);
+  }
+}
+
+function drawShape(type, cx, cy, color) {
+  const r = CELL*0.34;
+  ctx.fillStyle = color;
+  if (type === 'physical') {
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  } else if (type === 'ranged') {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy-r); ctx.lineTo(cx+r, cy+r*0.8); ctx.lineTo(cx-r, cy+r*0.8);
+    ctx.closePath(); ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy-r); ctx.lineTo(cx+r, cy); ctx.lineTo(cx, cy+r); ctx.lineTo(cx-r, cy);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
+async function initGame() {
+  document.getElementById('phaseText').innerHTML = '<b>読み込み中…</b><br>キャンペーンデータを取得しています。';
+  try {
+    await loadCampaign();
+    currentStageId = FIRST_SLOT_OPTIONS[0];
+    enterSelect();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('phaseText').innerHTML =
+      '<b>読み込みエラー</b><br>' + (err.message || err) +
+      '<br><br>data/campaign.json と data/stages/ が正しい場所にあるか確認してください。' +
+      '<br>また、file:// でHTMLを直接開いている場合は fetch がブロックされます。ローカルサーバー経由(例: <code>npx serve</code>)か、Vercel等にデプロイした状態で開いてください。';
+  }
+}
+initGame();
+</script>
+</body>
+</html>
