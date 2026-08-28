@@ -142,6 +142,25 @@
   .nav-card b { color: var(--accent-light); font-size: 13px; }
   .nav-card-link { text-decoration: none; cursor: pointer; transition: border-color .15s ease; }
   .nav-card-link:hover { border-color: var(--accent); }
+
+  .battlefield-btn {
+    margin-top: 12px;
+    height: 56px;
+    border-radius: 6px;
+    border: 1px solid var(--accent-dark);
+    background: linear-gradient(160deg, var(--panel-2), var(--panel)), url('backgrounds/battlefield_banner.webp');
+    background-size: cover; background-position: center;
+    background-blend-mode: overlay;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    color: var(--accent-light);
+    font-size: 16px; font-weight: 700; letter-spacing: .1em;
+    text-shadow: 0 1px 3px rgba(0,0,0,.8);
+    cursor: pointer;
+    transition: opacity .15s ease, transform .1s ease;
+  }
+  .battlefield-btn .arrow { font-weight: 400; }
+  .battlefield-btn:active { transform: translateY(1px); }
+  .battlefield-btn.disabled { opacity: .35; cursor: default; pointer-events: none; }
   .status-line b { color: var(--text); }
 
   .panel-block { display: none; flex-direction: column; gap: 10px; }
@@ -308,6 +327,9 @@
           <b>🛒 ショップ</b><br>
           所持金でアイテムや強化を購入できます。
         </a>
+      </div>
+      <div class="battlefield-btn disabled" id="battlefieldBtn">
+        戦場へ <span class="arrow">›</span>
       </div>
     </div>
 
@@ -730,6 +752,7 @@ function enterSelect() {
   refreshArmyStatus();
   document.getElementById('phaseText').innerHTML = '<b>ステージ選択</b><br>盤面のノードをクリックしてください。上にスクロールすると、クリア済みのステージも確認できます。';
   showPanel('panel-select');
+  refreshBattlefieldButton();
   draw();
 
   // Default scroll position: show "current" (frontier) + "next" row.
@@ -748,10 +771,28 @@ function selectStage(id) {
   }
   currentStageId = id;
   customStage = null;
+  // マップ上で選ぶだけ。実際に出兵するのは「戦場へ」ボタンを押した時。
+  refreshBattlefieldButton();
+  draw();
+}
+
+function enterBattlefield() {
+  if (!currentStageId || phase !== 'select') return;
   // ノベルパート(出兵前の序章)を再生してから編成画面へ。
   // story-data.js に該当データが無ければ即座に enterMuster() が呼ばれるだけなので安全。
-  StoryEngine.play(id, 'intro', () => enterMuster());
+  StoryEngine.play(currentStageId, 'intro', () => enterMuster());
 }
+
+function refreshBattlefieldButton() {
+  const btn = document.getElementById('battlefieldBtn');
+  if (!btn) return;
+  const ready = phase === 'select' && !!currentStageId;
+  btn.classList.toggle('disabled', !ready);
+}
+
+document.getElementById('battlefieldBtn').addEventListener('click', () => {
+  enterBattlefield();
+});
 
 document.getElementById('infoBtn').addEventListener('click', () => {
   document.getElementById('infoModalBackdrop').classList.add('show');
@@ -1174,6 +1215,14 @@ function drawStageMap() {
     ctx.lineWidth = 3;
     ctx.strokeStyle = stroke;
     ctx.stroke();
+
+    if (id === currentStageId) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 31, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(79,176,232,0.85)';
+      ctx.stroke();
+    }
 
     if (!isCleared && stageProgress[id]) {
       const total = stageProgress[id].length;
