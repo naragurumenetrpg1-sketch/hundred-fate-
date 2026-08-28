@@ -229,10 +229,20 @@
   inset: 0;
   background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.6) 68%, rgba(0,0,0,.85) 100%);
 }
+#titleLogo {
+  position: absolute;
+  top: 9%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 72%;
+  max-width: 340px;
+  z-index: 1;
+  filter: drop-shadow(0 4px 18px rgba(0,0,0,.5));
+}
 #titleMenu {
   position: relative;
   z-index: 1;
-  margin-top: 32vh;
+  margin-top: 40vh;
   width: 78%;
   max-width: 300px;
   display: flex;
@@ -263,6 +273,7 @@
 <body>
 
 <div id="titleScreen">
+  <img id="titleLogo" src="backgrounds/title_logo.webp" alt="The Fate of One Hundred">
   <div id="titleMenu">
     <div class="title-btn" id="btnNewGame">はじめから</div>
     <div class="title-btn" id="btnContinue">つづきから</div>
