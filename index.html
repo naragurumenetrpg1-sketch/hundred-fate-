@@ -145,20 +145,12 @@
 
   .battlefield-btn {
     margin-top: 12px;
-    height: 56px;
+    aspect-ratio: 700 / 205;
     border-radius: 6px;
-    border: 1px solid var(--accent-dark);
-    background: linear-gradient(160deg, var(--panel-2), var(--panel)), url('backgrounds/battlefield_banner.webp');
-    background-size: cover; background-position: center;
-    background-blend-mode: overlay;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    color: var(--accent-light);
-    font-size: 16px; font-weight: 700; letter-spacing: .1em;
-    text-shadow: 0 1px 3px rgba(0,0,0,.8);
+    background: url('backgrounds/battlefield_banner.webp') center / 100% 100% no-repeat;
     cursor: pointer;
     transition: opacity .15s ease, transform .1s ease;
   }
-  .battlefield-btn .arrow { font-weight: 400; }
   .battlefield-btn:active { transform: translateY(1px); }
   .battlefield-btn.disabled { opacity: .35; cursor: default; pointer-events: none; }
   .status-line b { color: var(--text); }
@@ -328,9 +320,7 @@
           所持金でアイテムや強化を購入できます。
         </a>
       </div>
-      <div class="battlefield-btn disabled" id="battlefieldBtn">
-        戦場へ <span class="arrow">›</span>
-      </div>
+      <div class="battlefield-btn disabled" id="battlefieldBtn" aria-label="戦場へ"></div>
     </div>
 
     <!-- MUSTER -->
