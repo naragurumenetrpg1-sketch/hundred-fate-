@@ -179,6 +179,7 @@
   .unit-detail-role { color: var(--muted); font-size: 10px; margin-bottom: 4px; }
 
   #appTitleBlock.hidden { display: none; }
+  #appLogo { display: block; margin: 0 auto 6px; max-width: 280px; width: 60%; height: auto; }
   .count-row span:first-child { color: var(--muted); }
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
   .dot.ally { background: var(--ally); }
@@ -229,20 +230,10 @@
   inset: 0;
   background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.6) 68%, rgba(0,0,0,.85) 100%);
 }
-#titleLogo {
-  position: absolute;
-  top: 9%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 72%;
-  max-width: 340px;
-  z-index: 1;
-  filter: drop-shadow(0 4px 18px rgba(0,0,0,.5));
-}
 #titleMenu {
   position: relative;
   z-index: 1;
-  margin-top: 40vh;
+  margin-top: 32vh;
   width: 78%;
   max-width: 300px;
   display: flex;
@@ -273,7 +264,6 @@
 <body>
 
 <div id="titleScreen">
-  <img id="titleLogo" src="backgrounds/title_logo.webp" alt="The Fate of One Hundred">
   <div id="titleMenu">
     <div class="title-btn" id="btnNewGame">はじめから</div>
     <div class="title-btn" id="btnContinue">つづきから</div>
@@ -282,7 +272,7 @@
 </div>
 
 <div id="appTitleBlock">
-  <h1>箱庭オートバトラー・プロトタイプ</h1>
+  <img id="appLogo" src="backgrounds/title_logo.webp" alt="The Fate of One Hundred">
   <div class="subtitle">兵力プールを管理しながら、ステージ1〜10のキャンペーンを攻略しよう。少ない兵で勝てばボーナス補充あり。</div>
 </div>
 
