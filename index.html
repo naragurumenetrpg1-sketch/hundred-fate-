@@ -131,6 +131,17 @@
   .pool-row .label { color: var(--muted); }
 
   .status-line { font-size: 13px; line-height: 1.6; color: var(--muted); }
+
+  .nav-card-row { display: flex; gap: 10px; }
+  .nav-card {
+    flex: 1; min-width: 0;
+    background: linear-gradient(160deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .nav-card b { color: var(--accent-light); font-size: 13px; }
+  .nav-card-link { text-decoration: none; cursor: pointer; transition: border-color .15s ease; }
+  .nav-card-link:hover { border-color: var(--accent); }
   .status-line b { color: var(--text); }
 
   .panel-block { display: none; flex-direction: column; gap: 10px; }
@@ -288,9 +299,15 @@
 
     <!-- SELECT -->
     <div class="panel-block" id="panel-select">
-      <div class="status-line">
-        <b>ステージ選択</b><br>
-        盤面のノードをクリックしてください。凡例は右上の「i」から確認できます。
+      <div class="nav-card-row">
+        <div class="status-line nav-card">
+          <b>ステージ選択</b><br>
+          盤面のノードをクリックしてください。凡例は右上の「i」から確認できます。
+        </div>
+        <a href="shop.html" class="status-line nav-card nav-card-link">
+          <b>🛒 ショップ</b><br>
+          所持金でアイテムや強化を購入できます。
+        </a>
       </div>
     </div>
 
