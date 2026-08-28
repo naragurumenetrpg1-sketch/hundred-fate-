@@ -94,6 +94,7 @@
   .status-bar-right .pool-val { font-size: 20px; font-weight: 700; color: var(--accent-light); line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
   .status-bar-right .pool-val .coin { font-size: 15px; margin-right: 2px; }
   .status-bar-right .battle-counts { display: flex; gap: 10px; font-size: 11px; color: var(--muted); margin-top: 3px; justify-content: flex-end; }
+  .status-bar.hidden { display: none; }
 
   .info-btn {
     flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
@@ -144,7 +145,8 @@
   .nav-card-link:hover { border-color: var(--accent); }
 
   .battlefield-btn {
-    margin-top: 12px;
+    margin: 12px auto 0;
+    width: 82%;
     aspect-ratio: 700 / 205;
     border-radius: 6px;
     background: url('backgrounds/battlefield_banner.webp') center / 100% 100% no-repeat;
@@ -153,6 +155,20 @@
   }
   .battlefield-btn:active { transform: translateY(1px); }
   .battlefield-btn.disabled { opacity: .35; cursor: default; pointer-events: none; }
+
+  #mapTopBar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(160deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 9px 12px; margin-bottom: 10px;
+  }
+  #mapTopBar.hidden { display: none; }
+  .map-top-left { display: flex; flex-direction: column; }
+  .map-top-label { font-size: 10px; color: var(--muted); letter-spacing: .05em; }
+  .map-top-progress { font-size: 15px; font-weight: 700; color: var(--accent-light); }
+  .map-top-right { display: flex; align-items: center; gap: 8px; }
+  .map-top-pool { display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 700; color: var(--accent-light); }
+  .map-top-pool .coin { font-size: 14px; }
   .status-line b { color: var(--text); }
 
   .panel-block { display: none; flex-direction: column; gap: 10px; }
@@ -299,6 +315,18 @@
 </div>
 
 <div class="layout">
+  <div id="mapTopBar">
+    <div class="map-top-left">
+      <span class="map-top-label">攻略状況</span>
+      <span class="map-top-progress" id="mapProgressVal">0 / 0</span>
+    </div>
+    <div class="map-top-right">
+      <button id="infoBtn2" class="info-btn" aria-label="凡例を表示">i</button>
+      <button id="hamburgerBtn2" class="info-btn" aria-label="メニュー">☰</button>
+      <div class="map-top-pool"><span class="coin">🪙</span><span id="mapPoolVal">100</span></div>
+    </div>
+  </div>
+
   <div class="board-wrap">
     <div id="mapScrollWrap">
       <canvas id="board" width="432" height="432"></canvas>
@@ -632,13 +660,23 @@ function setTitleVisible(show) {
 
 function refreshStageHeader() {
   document.getElementById('poolVal').textContent = pool;
+  document.getElementById('mapPoolVal').textContent = pool;
+  document.getElementById('mapProgressVal').textContent = `${cleared.size} / ${STAGE_ORDER.length}`;
+
+  const mapTopBar = document.getElementById('mapTopBar');
+  const statusBar = document.querySelector('.status-bar');
 
   if (phase === 'select') {
+    mapTopBar.classList.remove('hidden');
+    statusBar.classList.add('hidden');
     document.getElementById('stageNum').textContent = `攻略状況: ${cleared.size} / ${STAGE_ORDER.length}`;
     document.getElementById('stageName').textContent = 'ステージ選択';
     document.getElementById('stageDesc').textContent = '盤面のノードをクリックして挑戦する面を選んでください。';
     return;
   }
+
+  mapTopBar.classList.add('hidden');
+  statusBar.classList.remove('hidden');
 
   const s = currentStage();
   document.getElementById('stageNum').textContent = customStage
@@ -787,6 +825,9 @@ document.getElementById('battlefieldBtn').addEventListener('click', () => {
 document.getElementById('infoBtn').addEventListener('click', () => {
   document.getElementById('infoModalBackdrop').classList.add('show');
 });
+document.getElementById('infoBtn2').addEventListener('click', () => {
+  document.getElementById('infoModalBackdrop').classList.add('show');
+});
 document.getElementById('infoModalCloseBtn').addEventListener('click', () => {
   document.getElementById('infoModalBackdrop').classList.remove('show');
 });
@@ -795,6 +836,9 @@ document.getElementById('infoModalBackdrop').addEventListener('click', (e) => {
 });
 
 document.getElementById('hamburgerBtn').addEventListener('click', () => {
+  document.getElementById('hudMenuBackdrop').classList.add('show');
+});
+document.getElementById('hamburgerBtn2').addEventListener('click', () => {
   document.getElementById('hudMenuBackdrop').classList.add('show');
 });
 document.getElementById('hudMenuCloseBtn').addEventListener('click', () => {
