@@ -144,6 +144,12 @@
   .nav-card-link { text-decoration: none; cursor: pointer; transition: border-color .15s ease; }
   .nav-card-link:hover { border-color: var(--accent); }
 
+  .troop-stock { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+  .troop-stock .trow { display: flex; justify-content: space-between; font-size: 12px; }
+  .troop-stock .trow .tname { color: var(--muted); }
+  .troop-stock .trow .tval { color: var(--accent-light); font-weight: 700; }
+  .troop-stock .trow .tval.zero { color: #b06a5a; }
+
   .battlefield-btn {
     margin: 12px auto 0;
     width: 82%;
@@ -340,7 +346,7 @@
       <div class="nav-card-row">
         <div class="status-line nav-card">
           <b>ステージ選択</b><br>
-          盤面のノードをクリックしてください。凡例は右上の「i」から確認できます。
+          <div class="troop-stock" id="troopStockDisplay"></div>
         </div>
         <a href="shop.html" class="status-line nav-card nav-card-link">
           <b>🛒 ショップ</b><br>
@@ -456,6 +462,7 @@ const MAX_DEPLOY = 20;
 
 const TYPES = Battle.TYPES;
 const TYPE_KEYS = Battle.TYPE_KEYS;
+const TROOP_DISPLAY_NAME = { physical: '騎士', ranged: '弓士', magic: '魔法士' };
 
 function stageEnemies(rows) {
   const list = [];
@@ -565,7 +572,7 @@ const SAVE_KEY = 'hundredfate_save_v1';
 function saveGame() {
   try {
     const data = {
-      pool, cleared: [...cleared], currentStageId, chosenBranches, stageProgress,
+      poolByType, cleared: [...cleared], currentStageId, chosenBranches, stageProgress,
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   } catch (e) { console.warn('save failed', e); }
@@ -580,7 +587,7 @@ function loadGame() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return false;
     const data = JSON.parse(raw);
-    pool = data.pool ?? 100;
+    poolByType = data.poolByType || { physical: 50, ranged: 30, magic: 20 };
     cleared = new Set(data.cleared || []);
     currentStageId = data.currentStageId || FIRST_SLOT_OPTIONS[0];
     chosenBranches = data.chosenBranches || {};
@@ -634,7 +641,26 @@ function setCanvasSize(w, h) {
   if (canvas.height !== h) canvas.height = h;
 }
 
-let pool = 100;
+// 兵力プール(騎士/弓士/魔法士の内訳で管理)
+let poolByType = { physical: 50, ranged: 30, magic: 20 };
+function totalPool() {
+  return TYPE_KEYS.reduce((sum, k) => sum + poolByType[k], 0);
+}
+function distributeByRatio(amount, ratios) {
+  const totalRatio = TYPE_KEYS.reduce((s, k) => s + (ratios[k] || 0), 0);
+  const result = {}; let assigned = 0;
+  for (const k of TYPE_KEYS) {
+    result[k] = totalRatio > 0 ? Math.floor(amount * (ratios[k] || 0) / totalRatio) : 0;
+    assigned += result[k];
+  }
+  let remainder = amount - assigned;
+  for (const k of TYPE_KEYS) {
+    if (remainder <= 0) break;
+    result[k]++; remainder--;
+  }
+  return result;
+}
+const INITIAL_POOL_RATIO = { physical: 5, ranged: 3, magic: 2 }; // 50:30:20 と同じ比率
 let deployCount = 6;
 let units = [];
 let phase = 'select';
@@ -678,9 +704,19 @@ function currentChapterLabel() {
   return `${frontierSlotIndex() + 1}章`;
 }
 
+function refreshTroopStockDisplay() {
+  const el = document.getElementById('troopStockDisplay');
+  if (!el) return;
+  el.innerHTML = TYPE_KEYS.map(k => {
+    const val = poolByType[k];
+    return `<div class="trow"><span class="tname">${TROOP_DISPLAY_NAME[k]}</span><span class="tval ${val === 0 ? 'zero' : ''}">残り ${val}</span></div>`;
+  }).join('');
+}
+
 function refreshStageHeader() {
-  document.getElementById('poolVal').textContent = pool;
-  document.getElementById('mapPoolVal').textContent = pool;
+  document.getElementById('poolVal').textContent = totalPool();
+  document.getElementById('mapPoolVal').textContent = totalPool();
+  refreshTroopStockDisplay();
   document.getElementById('mapProgressVal').textContent = currentChapterLabel();
 
   const mapTopBar = document.getElementById('mapTopBar');
@@ -884,7 +920,7 @@ function enterMuster() {
   refreshStageHeader();
   refreshArmyStatus();
   const s = currentStage();
-  deployCount = Math.max(1, Math.min(deployCount, pool, MAX_DEPLOY));
+  deployCount = Math.max(1, Math.min(deployCount, totalPool(), MAX_DEPLOY));
   document.getElementById('deployNum').textContent = deployCount;
 
   let hint = `目安: ${s.par}体以下でクリアするとボーナス+${s.bonus}体`;
@@ -906,7 +942,7 @@ document.getElementById('deployMinus').addEventListener('click', () => {
   document.getElementById('deployNum').textContent = deployCount;
 });
 document.getElementById('deployPlus').addEventListener('click', () => {
-  deployCount = Math.min(pool, MAX_DEPLOY, deployCount + 1);
+  deployCount = Math.min(totalPool(), MAX_DEPLOY, deployCount + 1);
   document.getElementById('deployNum').textContent = deployCount;
 });
 document.getElementById('hudCustomStageBtn').addEventListener('click', () => {
@@ -945,8 +981,7 @@ document.getElementById('loadCustomBtn').addEventListener('click', () => {
 });
 
 document.getElementById('museterConfirm').addEventListener('click', () => {
-  if (deployCount < 1 || deployCount > pool) return;
-  pool -= deployCount;
+  if (deployCount < 1 || deployCount > totalPool()) return;
   units = [];
   enterSetup();
 });
@@ -1014,24 +1049,31 @@ canvas.addEventListener('click', (e) => {
   if (!inAllyZone(x, y)) return;
   const placed = units.filter(u => u.team === 'ally').length;
   if (placed >= deployCount) return;
+  if (poolByType[selectedType] <= 0) return; // その兵種の在庫が無い
   if (occupied(x, y) || isObstacleCell(x, y)) return;
+  poolByType[selectedType]--;
   units.push(makeUnit('ally', selectedType, x, y));
   buildRosterPlacement();
   refreshDeployButton();
   refreshArmyStatus();
+  refreshStageHeader();
   draw();
 });
 
 document.getElementById('clearPlacementBtn').addEventListener('click', () => {
+  for (const u of units) { if (u.team === 'ally') poolByType[u.type]++; } // 在庫を払い戻す
   units = units.filter(u => u.team !== 'ally');
   buildRosterPlacement();
   refreshDeployButton();
   refreshArmyStatus();
+  refreshStageHeader();
   draw();
 });
 
 document.getElementById('retreatBtn').addEventListener('click', () => {
   if (phase !== 'setup') return; // mid-battle retreat isn't supported yet
+  for (const u of units) { if (u.team === 'ally') poolByType[u.type]++; } // 配置済みの在庫を払い戻す
+  units = units.filter(u => u.team !== 'ally');
   customStage = null;
   enterSelect();
 });
@@ -1113,10 +1155,15 @@ function resolveBattle(won) {
   const s = currentStage();
   let bonus = 0;
 
-  pool += survivors;
+  // 生き残った兵は、それぞれの兵種の在庫に戻す(倒された分はそのまま失われる)。
+  for (const u of units) {
+    if (u.team === 'ally' && u.hp > 0) poolByType[u.type]++;
+  }
+
   if (won && deployCount <= s.par) {
     bonus = s.bonus;
-    pool += bonus;
+    const bonusSplit = distributeByRatio(bonus, INITIAL_POOL_RATIO);
+    for (const k of TYPE_KEYS) poolByType[k] += bonusSplit[k];
   }
 
   if (won && !customStage) {
@@ -1167,7 +1214,7 @@ function resolveBattle(won) {
     html += `兵を立て直して再挑戦しましょう。`;
     box.innerHTML = html;
 
-    if (pool <= 0) {
+    if (totalPool() <= 0) {
       box.innerHTML += `<br><br><b>兵力が尽きました。作戦失敗です。</b>`;
       btn.textContent = 'もう一度最初から';
       btn.onclick = () => { fullReset(); };
@@ -1178,7 +1225,7 @@ function resolveBattle(won) {
   }
 
   if (customStage) {
-    if (won || pool > 0) {
+    if (won || totalPool() > 0) {
       btn.textContent = '本編に戻る';
       btn.onclick = () => { customStage = null; enterSelect(); };
     }
@@ -1201,7 +1248,7 @@ function resolveBattle(won) {
 }
 
 function fullReset() {
-  pool = 100;
+  poolByType = { physical: 50, ranged: 30, magic: 20 };
   cleared = new Set();
   currentStageId = FIRST_SLOT_OPTIONS[0];
   chosenBranches = {};
